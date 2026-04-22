@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FortuneWheel PRO PRO MAX | 旗艦决策系統</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #ec4899;
+            --gold: #f59e0b;
+            --dark-bg: #020617;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+        }
+
+        /* 基礎設定 */
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        body {
+            background: radial-gradient(circle at center, #1e1b4b 0%, var(--dark-bg) 100%);
+            color: #f8fafc;
+            font-family: 'Inter', 'Noto Sans TC', system-ui, sans-serif;
+            margin: 0; display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; overflow-x: hidden;
+        }
+
+        /* 相容性優化的 PRO MAX 標題 */
+        .brand {
+            padding: 30px; text-align: center;
+            font-weight: 900; font-size: 1.8rem; letter-spacing: 5px;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            /* Vendor Prefixes for Compatibility */
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            color: transparent;
+            filter: drop-shadow(0 0 15px rgba(99, 102, 241, 0.6));
+        }
+
+        /* 旗艦級輪盤舞台 */
+        .wheel-stage {
+            position: relative; width: 360px; height: 360px; margin: 20px 0;
+            border-radius: 50%; padding: 12px;
+            background: #1e293b;
+            box-shadow: 0 0 80px rgba(0,0,0,0.8);
+        }
+
+        /* RGB 流光邊框 */
+        .wheel-stage::after {
+            content: ''; position: absolute; inset: -4px; border-radius: 50%;
+            background: conic-gradient(from var(--a), var(--primary), var(--secondary), var(--gold), var(--primary));
+            z-index: -1; animation: rotate-rgb 4s linear infinite;
+        }
+        @property --a { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+        @keyframes rotate-rgb { to { --a: 360deg; } }
+
+        .pointer {
+            position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+            width: 35px; height: 55px; fill: var(--secondary);
+            filter: drop-shadow(0 0 15px var(--secondary)); z-index: 100;
+        }
+
+        canvas {
+            width: 100%; height: 100%; border-radius: 50%;
+            transition: transform 8s cubic-bezier(0.15, 0, 0, 1);
+            filter: brightness(1.1);
+        }
+
+        /* 商用控制面板 */
+        .glass-panel {
+            width: 92%; max-width: 480px; background: var(--panel-bg);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 32px; padding: 25px; margin-bottom: 40px;
+        }
+
+        .label-row { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--gold); margin-bottom: 8px; font-weight: bold; }
+        
+        select, textarea {
+            width: 100%; background: rgba(15, 23, 42, 0.6); border: 1px solid #334155;
+            border-radius: 16px; color: #fff; padding: 14px; font-size: 1rem; margin-bottom: 15px;
+            outline: none; transition: 0.3s;
+        }
+        select:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.2); }
+
+        .btn-launch {
+            width: 100%; padding: 20px; border: none; border-radius: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white; font-size: 1.4rem; font-weight: 900; cursor: pointer;
+            box-shadow: 0 15px 30px rgba(236, 72, 153, 0.3);
+            transition: 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .btn-launch:hover { transform: translateY(-3px); filter: brightness(1.1); }
+        .btn-launch:active { transform: scale(0.96); }
+        .btn-launch:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* 全屏慶祝彈窗 */
+        .overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+            display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .win-card { text-align: center; animation: pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .win-card h2 { color: var(--gold); letter-spacing: 6px; font-size: 0.9rem; margin: 0; }
+        .win-card .name { font-size: 4.5rem; font-weight: 900; margin: 25px 0; text-shadow: 0 0 30px #fff; }
+        .close-btn { background: #334155; color: white; border: none; padding: 12px 40px; border-radius: 12px; cursor: pointer; font-weight: bold; }
+        
+        @keyframes pop { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div class="brand">FORTUNEWHEEL PRO MAX</div>
+
+    <div class="wheel-stage">
+        <svg class="pointer" viewBox="0 0 100 120">
+            <path d="M50 120 L10 20 A40 40 0 1 1 90 20 Z" />
+        </svg>
+        <canvas id="wheel" width="1000" height="1000"></canvas>
+    </div>
+
+    <div class="glass-panel">
+        <div class="label-row">
+            <span>主題場景範例庫</span>
+            <span>支援「名稱:權重」格式</span>
+        </div>
+        <select id="topicPreset"></select>
+        
+        <textarea id="dataInput" rows="4"></textarea>
+        
+        <button class="btn-launch" id="launchBtn">LAUNCH SPIN</button>
+    </div>
+
+    <div id="resultOverlay" class="overlay">
+        <div class="win-card">
+            <h2>THE DESTINY HAS CHOSEN</h2>
+            <div class="name" id="winnerDisplay">WINNER</div>
+            <button class="close-btn" onclick="closeModal()">確認</button>
+        </div>
+    </div>
+
+    <script>
+        const library = {
+            "🎲 是/否 (高公平)": "是:1, 否:1, 待定:0.2",
+            "🏙️ 城市旅遊": "台北, 東京, 大阪, 首爾, 曼谷, 新加坡, 巴黎, 倫敦",
+            "🦁 動物": "貓咪, 狗狗, 企鵝, 獅子, 大象, 狐狸, 熊貓",
+            "表情": "😊, 😂, 😍, 🤔, 😴, 🥳, 🤮",
+            "🍴 餐飲選擇": "火鍋:2, 壽司:1, 義大利麵:1, 漢堡:1, 拉麵:2, 滷肉飯:3",
+            "🥩 肉類": "牛肉, 豬肉, 雞肉, 羊肉, 海鮮",
+            "🍎 水果": "蘋果, 香蕉, 西瓜, 草莓, 芒果",
+            "🥦 蔬菜": "花椰菜, 高麗菜, 茄子, 空心菜",
+            "🍰 甜點": "蛋糕, 冰淇淋, 甜甜圈, 布丁",
+            "🏃 活動": "看電影, 爬山, 逛街, 睡午覺, 健身, 玩桌遊",
+            "🍺 朋友聚會": "真心話:5, 大冒險:5, 喝一杯:2, 指定人表演:3",
+            "🎬 電影類型": "動作, 喜劇, 恐怖, 浪漫, 科幻, 紀錄片",
+            "🎨 你畫我猜": "珍珠奶茶, 蜘蛛人, 仙人掌, 臭豆腐, 鋼琴",
+            "⚖️ 你會選擇 (權重版)": "超能力是飛:1, 超能力是隱形:1, 變超有錢:1",
+            "🙅 我從來沒有": "沒去過美國, 沒看過鐵達尼號, 沒搭過高鐵",
+            "🤥 兩真一假": "說個童年往事, 說個秘密愛好, 說個誇張謊言",
+            "📂 分類挑戰": "水果名, 藝人名, 國家名, 汽車品牌",
+            "🎵 猜那首歌": "周杰倫的歌, 抖音神曲, 90年代經典, 英文歌",
+            "🔍 尋寶遊戲": "紅色的東西, 圓形的東西, 有香味的東西"
+        };
+
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        const launchBtn = document.getElementById('launchBtn');
+        const inputArea = document.getElementById('dataInput');
+        const topicSelect = document.getElementById('topicPreset');
+        const colors = ["#6366f1", "#8b5cf6", "#d946ef", "#f43f5e", "#f59e0b", "#10b981", "#06b6d4"];
+
+        let currentRotation = 0;
+        let isSpinning = false;
+        let items = [];
+
+        // --- 專業音效引擎 ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTick() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.05);
+        }
+
+        function init() {
+            for (let k in library) {
+                topicSelect.add(new Option(k, k));
+            }
+            topicSelect.onchange = () => {
+                inputArea.value = library[topicSelect.value];
+                drawWheel();
+            };
+            inputArea.value = library["🎲 是/否 (高公平)"];
+            drawWheel();
+        }
+
+        function parseItems() {
+            return inputArea.value.split(/[,\n]/).map(s => {
+                let [name, weight] = s.trim().split(':');
+                return { name, weight: parseFloat(weight) || 1 };
+            }).filter(i => i.name);
+        }
+
+        function drawWheel() {
+            items = parseItems();
+            const totalWeight = items.reduce((sum, i) => sum + i.weight, 0);
+            let startAngle = 0;
+            ctx.clearRect(0, 0, 1000, 1000);
+
+            items.forEach((item, i) => {
+                const sliceAngle = (item.weight / totalWeight) * 2 * Math.PI;
+                // 畫扇形
+                ctx.beginPath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.moveTo(500, 500);
+                ctx.arc(500, 500, 485, startAngle, startAngle + sliceAngle);
+                ctx.fill();
+                ctx.strokeStyle = "rgba(0,0,0,0.1)";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // 畫文字
+                ctx.save();
+                ctx.translate(500, 500);
+                ctx.rotate(startAngle + sliceAngle / 2);
+                ctx.textAlign = "right"; ctx.fillStyle = "#fff";
+                ctx.font = "bold 38px Inter, sans-serif";
+                ctx.fillText(item.name.length > 8 ? item.name.substring(0,7)+'..' : item.name, 460, 12);
+                ctx.restore();
+                
+                startAngle += sliceAngle;
+            });
+        }
+
+        function startSpin() {
+            if (isSpinning || items.length < 2) return;
+            isSpinning = true;
+            launchBtn.disabled = true;
+
+            const extraSpins = 12 + Math.floor(Math.random() * 6);
+            const randomAngle = Math.random() * 360;
+            currentRotation += (extraSpins * 360) + randomAngle;
+
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+            // 物理音效模擬
+            let tickCount = 0;
+            const tickTimer = setInterval(() => {
+                playTick();
+                tickCount++;
+                if (tickCount > 40) clearInterval(tickTimer);
+            }, 180);
+
+            setTimeout(() => {
+                clearInterval(tickTimer);
+                isSpinning = false;
+                launchBtn.disabled = false;
+
+                // 結算結果
+                const actualDeg = currentRotation % 360;
+                const totalWeight = items.reduce((sum, i) => sum + i.weight, 0);
+                let targetAngle = (360 - actualDeg + 270) % 360;
+
+                let cumulativeAngle = 0;
+                let winner = items[0].name;
+                for (let i = 0; i < items.length; i++) {
+                    let sliceDeg = (items[i].weight / totalWeight) * 360;
+                    if (targetAngle >= cumulativeAngle && targetAngle < cumulativeAngle + sliceDeg) {
+                        winner = items[i].name;
+                        break;
+                    }
+                    cumulativeAngle += sliceDeg;
+                }
+
+                document.getElementById('winnerDisplay').innerText = winner;
+                document.getElementById('resultOverlay').style.display = 'flex';
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+            }, 8000);
+        }
+
+        function closeModal() {
+            document.getElementById('resultOverlay').style.display = 'none';
+        }
+
+        init();
+        inputArea.oninput = drawWheel;
+        launchBtn.onclick = startSpin;
+    </script>
+</body>
+</html>
